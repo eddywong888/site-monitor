@@ -57,6 +57,9 @@ def safe_main(main):
     """Run a check; on a crash, log only the error type (public logs) and send the detail to Telegram."""
     try:
         main()
+    except TelegramError as e:
+        print(f"!! {e}")  # can't report a Telegram failure through Telegram
+        raise SystemExit(1) from None
     except Exception as e:  # noqa: BLE001
         print(f"!! {type(e).__name__} — details sent to Telegram")
         try:
@@ -215,8 +218,20 @@ def esc(s):
 def _tg(method, data, headers=None):
     token = os.environ["TELEGRAM_BOT_TOKEN"]
     req = urllib.request.Request(f"https://api.telegram.org/bot{token}/{method}", data=data, headers=headers or {})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return r.status
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return r.status
+    except urllib.error.HTTPError as e:
+        # Telegram's own reason ("Unauthorized", "chat not found") names no secret, so it may be logged.
+        try:
+            reason = json.loads(e.read()).get("description", "")
+        except Exception:  # noqa: BLE001
+            reason = ""
+        raise TelegramError(f"Telegram {method} HTTP {e.code}: {reason}") from None
+
+
+class TelegramError(Exception):
+    pass
 
 
 def telegram_configured():
