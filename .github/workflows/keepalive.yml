@@ -1,0 +1,19 @@
+# GitHub pauses scheduled workflows in a repo with no commits for 60 days. A monthly commit prevents that.
+name: Keep schedules alive
+on:
+  schedule:
+    - cron: "41 2 1 * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  touch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: |
+          date -u +%F > .keepalive
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .keepalive
+          git commit -m "keepalive $(date -u +%F)" && git push

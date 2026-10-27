@@ -1,0 +1,4 @@
+[
+  {"name": "{website1}", "url": "https://{website1}", "pages": ["/shop/", "/contact-us/"]},
+  {"name": "{website2}", "url": "https://{website2}", "pages": []}
+]

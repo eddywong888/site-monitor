@@ -1,0 +1,23 @@
+name: Weekly broken-link report
+on:
+  schedule:
+    - cron: "13 19 * * 6"    # Sunday 03:13 MYT (quiet hours)
+  workflow_dispatch:
+    inputs:
+      sites:
+        description: "Site numbers to check, e.g. 1 3 (blank = all). Never type a site name: inputs are public."
+        required: false
+permissions:
+  contents: read
+jobs:
+  links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - run: python3 monitor/links.py $SITES
+        env:
+          SITES_JSON: ${{ secrets.SITES_JSON }}
+          SITES: ${{ inputs.sites }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}

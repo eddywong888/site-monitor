@@ -1,0 +1,23 @@
+name: Daily uptime report
+on:
+  schedule:
+    - cron: "7 0 * * *"      # 08:07 MYT daily
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: state
+          key: monitor-state-none
+          restore-keys: monitor-state-
+      - run: python3 monitor/uptime_report.py
+        env:
+          SITES_JSON: ${{ secrets.SITES_JSON }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
