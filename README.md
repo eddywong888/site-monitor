@@ -50,3 +50,14 @@ python3 monitor/seo_speed.py 2
 The link crawler fetches one page at a time per site with a 0.7 s pause, at most 2,500 URLs per site,
 skipping cart/checkout/account/wp-admin and any URL with `?` — gentle enough for the 1GB servers.
 Requests identify as `site-monitor/1.0 (+https://github.com/eddywong888/site-monitor)`.
+
+## Telegram commands (bot/)
+
+`bot/worker.js` is a Cloudflare Worker that lets you start checks from Telegram: `/status`, `/seo 2`,
+`/links 3`, `/runs`, `/help`. It obeys one chat ID, verifies Telegram's secret header, rate-limits
+repeat crawls (KV), and can only start the read-only workflows above.
+
+Setup: copy `bot/wrangler.example.toml` to `bot/wrangler.toml` (git-ignored), `wrangler deploy`, then
+`wrangler secret put` for `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `WEBHOOK_SECRET` (random) and
+`GITHUB_TOKEN` (fine-grained, this repo only, Actions: read and write). Finally
+`curl -X POST -H "X-Setup-Key: <WEBHOOK_SECRET>" https://<worker>/setup` to register the webhook.

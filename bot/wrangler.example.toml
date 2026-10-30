@@ -1,0 +1,9 @@
+name = "site-monitor-bot"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+account_id = "<your Cloudflare account ID>"
+workers_dev = true
+
+[[kv_namespaces]]
+binding = "COOLDOWN"
+id = "<KV namespace ID from: wrangler kv namespace create site-monitor-bot-cooldown>"

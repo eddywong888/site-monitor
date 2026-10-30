@@ -2,3 +2,5 @@ __pycache__/
 state/
 .DS_Store
 sites.json
+bot/wrangler.toml
+bot/.wrangler/
