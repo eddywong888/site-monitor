@@ -3,7 +3,8 @@
 // Telegram → this Worker (webhook) → GitHub workflow_dispatch → report arrives in Telegram.
 // Obeys one chat only, verifies Telegram's secret header, and can only start the read-only checks.
 //
-// Secrets (wrangler secret put): TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, WEBHOOK_SECRET, GITHUB_TOKEN
+// Secrets (wrangler secret put): TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, WEBHOOK_SECRET, GITHUB_TOKEN,
+// GSC_ALIASES (JSON {"command_name": "site number"}: per-site shortcuts kept out of this public file)
 // KV binding: COOLDOWN
 
 const REPO = "eddywong888/site-monitor";
@@ -11,11 +12,13 @@ const COMMANDS = {
   status: { workflow: "uptime-report.yml", label: "Uptime & response report", eta: "about 1 min", sites: false, cooldown: 120 },
   seo:    { workflow: "seo-speed.yml",     label: "SEO & speed check",        eta: "2–3 min per site", sites: true, cooldown: 1800 },
   links:  { workflow: "broken-links.yml",  label: "Broken-link crawl",        eta: "about 20 min per site", sites: true, cooldown: 3600 },
+  gsc:    { workflow: "gsc.yml",           label: "Search Console summary",   eta: "about 1 min", sites: true, cooldown: 300 },
 };
 const HELP = `<b>Site monitor commands</b>
 /status — uptime &amp; response times now
 /seo 2 — SEO &amp; speed for site 2 (blank = all)
 /links 3 — broken-link crawl for site 3 (blank = all)
+/gsc 1 — Google Search Console summary for site 1
 /runs — last 5 checks and their result
 /help — this list
 
@@ -43,9 +46,11 @@ export default {
 };
 
 async function handle(text, env) {
-  const [rawCmd, ...args] = text.split(/\s+/);
-  const cmd = rawCmd.toLowerCase().replace(/^\//, "").replace(/@.*$/, "");
-  if (cmd === "help" || cmd === "start") return HELP;
+  let [rawCmd, ...args] = text.split(/\s+/);
+  let cmd = rawCmd.toLowerCase().replace(/^\//, "").replace(/@.*$/, "").replace(/-/g, "_");
+  const alias = aliases(env)[cmd];
+  if (alias) [cmd, args] = ["gsc", [alias]];
+  if (cmd === "help" || cmd === "start") return HELP + aliasHelp(env);
   if (cmd === "runs") return recentRuns(env);
   const spec = COMMANDS[cmd];
   if (!spec) return `Unknown command. ${HELP}`;
@@ -70,6 +75,15 @@ async function handle(text, env) {
   return `▶️ ${spec.label} started for ${sites ? "site " + sites : "all sites"}. Report here in ${spec.eta}.`;
 }
 
+function aliases(env) {
+  try { return JSON.parse(env.GSC_ALIASES || "{}"); } catch { return {}; }
+}
+
+function aliasHelp(env) {
+  const list = Object.entries(aliases(env));
+  return list.length ? "\n\n<b>Search Console shortcuts</b>\n" + list.map(([c, n]) => `/${c} — site ${n}`).join("\n") : "";
+}
+
 async function recentRuns(env) {
   const res = await github(env, "/actions/runs?per_page=5&exclude_pull_requests=true");
   if (res.status === 401) return "⚠️ GitHub token rejected (expired or revoked).";
@@ -92,6 +106,8 @@ async function setup(request, env, url) {
     { command: "status", description: "Uptime & response times now" },
     { command: "seo", description: "SEO & speed (add a site number)" },
     { command: "links", description: "Broken-link crawl (add a site number)" },
+    { command: "gsc", description: "Search Console summary (add a site number)" },
+    ...Object.entries(aliases(env)).map(([c, n]) => ({ command: c, description: `Search Console summary, site ${n}` })),
     { command: "runs", description: "Last 5 checks" },
     { command: "help", description: "Command list" },
   ] });
