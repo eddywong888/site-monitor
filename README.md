@@ -54,10 +54,18 @@ Requests identify as `site-monitor/1.0 (+https://github.com/eddywong888/site-mon
 ## Telegram commands (bot/)
 
 `bot/worker.js` is a Cloudflare Worker that lets you start checks from Telegram: `/status`, `/seo 2`,
-`/links 3`, `/runs`, `/help`. It obeys one chat ID, verifies Telegram's secret header, rate-limits
+`/links 3`, `/gsc 1`, `/runs`, `/help`, plus private per-site Search Console shortcuts (`GSC_ALIASES` Worker secret). It obeys one chat ID, verifies Telegram's secret header, rate-limits
 repeat crawls (KV), and can only start the read-only workflows above.
 
 Setup: copy `bot/wrangler.example.toml` to `bot/wrangler.toml` (git-ignored), `wrangler deploy`, then
 `wrangler secret put` for `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `WEBHOOK_SECRET` (random) and
 `GITHUB_TOKEN` (fine-grained, this repo only, Actions: read and write). Finally
 `curl -X POST -H "X-Setup-Key: <WEBHOOK_SECRET>" https://<worker>/setup` to register the webhook.
+
+## Search Console summary (gsc.yml)
+
+`/gsc N` (or a shortcut) runs `monitor/gsc.py`: last 28 days vs the 28 before (clicks, impressions, CTR,
+position, devices), top queries, movers, top pages, sitemap status, plus a file of the top 50 queries.
+GitHub logs in to Google keylessly (Workload Identity Federation → a read-only service account), so no
+key file exists; the service account is a Restricted user on each Search Console property.
+Secrets: `GCP_WIF_PROVIDER`, `GCP_SERVICE_ACCOUNT`.
